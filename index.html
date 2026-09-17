@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Monojog+ – Neuro Analytics Platform</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+:root{
+  --bg1:#1a1f36;--bg2:#0f1419;
+  --panel:rgba(45,55,72,.65);
+  --border:rgba(255,255,255,.1);
+  --accent:#4a90e2;--accent2:#7e57c2;
+  --ok:#48bb78;--warn:#ed8936;--danger:#f56565;
+  --text:#e2e8f0;--muted:#a0aec0;
+  --happy:#f6e05e;--excited:#ed8936;--calm:#4299e1;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:linear-gradient(135deg,var(--bg1) 0%,var(--bg2) 100%);
+  color:var(--text);min-height:100vh;padding:12px;
+}
+.container{max-width:1400px;margin:0 auto;width:100%}
+.header{text-align:center;margin-bottom:20px;padding:12px 0;border-bottom:1px solid var(--border)}
+.header h1{
+  font-size:2rem;font-weight:300;letter-spacing:2px;margin-bottom:4px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .sub{color:var(--muted);font-size:.85rem;letter-spacing:1px}
+.source-bar{
+  display:flex;justify-content:center;align-items:center;gap:10px;
+  margin-bottom:16px;flex-wrap:wrap;font-size:.82rem;
+}
+.source-input{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);
+  border-radius:20px;color:var(--text);padding:6px 14px;outline:none;width:300px;
+}
+.panel{
+  background:var(--panel);backdrop-filter:blur(10px);
+  border:1px solid var(--border);border-radius:16px;
+  padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.3);margin-bottom:16px;
+}
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.pt{font-size:1.05rem;font-weight:600}
+.si{display:flex;align-items:center;gap:8px;font-size:.82rem}
+.dot{width:8px;height:8px;border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
+.ok-dot{background:var(--ok)}.warn-dot{background:var(--warn)}.bad-dot{background:var(--danger)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+.g2m{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:16px}
+
+.prow{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-top:8px}
+.pf{display:flex;flex-direction:column;gap:6px}
+.pl{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+select,input[type=number],input[type=text]{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);
+  border-radius:8px;color:var(--text);padding:8px 10px;font-size:.85rem;
+  outline:none;transition:border-color .25s;cursor:pointer}
+select:focus,input[type=number]:focus,input[type=text]:focus{border-color:var(--accent)}
+input[type=number]{width:80px}
+.age-badge{
+  background:rgba(74,144,226,.18);border:1px solid var(--accent);
+  border-radius:20px;padding:6px 12px;color:var(--accent);font-size:.82rem}
+.apply-btn{
+  padding:8px 18px;border:none;border-radius:25px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  color:#fff;font-weight:600;font-size:.84rem;cursor:pointer;
+  transition:all .25s;letter-spacing:1px}
+.apply-btn:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(74,144,226,.4)}
+.saved-ok{color:var(--ok);font-size:.84rem;padding:6px 2px}
+.p-note{margin-top:10px;font-size:.75rem;color:var(--muted);font-style:italic}
+.p-badge{
+  background:var(--accent);color:#fff;border-radius:20px;
+  padding:2px 8px;font-size:.68rem;margin-left:6px;vertical-align:middle}
+.hidden{display:none!important}
+
+.eeg-wrap{
+  background:rgba(0,0,0,.45);border-radius:12px;
+  height:160px;position:relative;overflow:hidden;margin-bottom:12px}
+canvas{display:block;width:100%!important;height:100%!important}
+.raw-info{background:rgba(0,0,0,.3);border-radius:8px;padding:8px;
+  margin-bottom:12px;font-size:.74rem;color:var(--muted);text-align:center}
+
+.mc{
+  background:rgba(255,255,255,.05);border-radius:12px;padding:14px;
+  text-align:center;border:1px solid var(--border);transition:transform .25s}
+.mc:hover{transform:translateY(-2px)}
+.mv{font-size:1.9rem;font-weight:300;margin:6px 0;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ml{color:var(--muted);font-size:.76rem;text-transform:uppercase;letter-spacing:1px}
+.prog{background:rgba(255,255,255,.1);border-radius:10px;height:6px;margin-top:8px;overflow:hidden}
+.bar{height:100%;border-radius:10px;transition:width .5s ease}
+.att-bar{background:linear-gradient(90deg,var(--accent),#63b3ed)}
+.med-bar{background:linear-gradient(90deg,var(--accent2),#b794f4)}
+.sig-bar{background:linear-gradient(90deg,var(--ok),#9ae6b4)}
+.dq{text-align:center;margin-top:12px;padding:8px;border-radius:8px;font-size:.8rem}
+.dq-ok{background:rgba(72,187,120,.18);color:var(--ok)}
+.dq-warn{background:rgba(237,137,54,.18);color:var(--warn)}
+.dq-bad{background:rgba(245,101,101,.18);color:var(--danger)}
+.alert-bar{
+  display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;
+  margin-top:14px;padding:10px;background:rgba(0,0,0,.3);border-radius:12px}
+.abtn{
+  padding:8px 16px;border:none;border-radius:25px;
+  font-weight:600;font-size:.8rem;cursor:pointer;
+  background:var(--accent);color:#fff;letter-spacing:1px;transition:all .25s}
+.abtn:hover{transform:translateY(-2px)}
+.abtn.off{background:var(--danger)}
+.conn-box{text-align:center;padding:14px}
+.conn-msg{font-size:1rem;margin-bottom:10px;font-weight:300}
+.el-st{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 16px;
+  border-radius:25px;font-weight:500;font-size:.85rem;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2)}
+
+.freq-wrap{background:rgba(0,0,0,.3);border-radius:12px;height:240px;position:relative;overflow:hidden}
+.fcard{background:rgba(255,255,255,.05);border-radius:10px;padding:10px 6px;text-align:center;border:1px solid var(--border)}
+.fv{font-size:1.15rem;font-weight:300;margin:4px 0}
+.fl{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:1px}
+
+.em-list{display:flex;flex-direction:column;gap:12px}
+.em{background:rgba(255,255,255,.05);border-radius:12px;padding:12px;border:1px solid var(--border)}
+.em-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.em-name{font-size:.88rem;font-weight:600}
+.em-val{font-size:1rem;font-weight:300}
+.spedo{width:100%;height:20px;background:rgba(0,0,0,.35);border-radius:10px;overflow:hidden}
+.sf{height:100%;border-radius:10px;transition:width .5s ease}
+.happy-f{background:linear-gradient(90deg,var(--happy),#faf089)}
+.exc-f{background:linear-gradient(90deg,var(--excited),#fed7d7)}
+.calm-f{background:linear-gradient(90deg,var(--calm),#90cdf4)}
+.str-f{background:linear-gradient(90deg,var(--danger),#fc8181)}
+.foc-f{background:linear-gradient(90deg,var(--ok),#9ae6b4)}
+
+.il{list-style:none;margin-top:10px}
+.ii{padding:8px 10px;margin-bottom:6px;background:rgba(255,255,255,.05);border-radius:8px;border-left:4px solid var(--accent);font-size:.85rem}
+.in{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--accent);color:#fff;border-radius:50%;margin-right:6px;font-size:.68rem;font-weight:600}
+.tips{margin-top:12px;padding:12px;background:rgba(0,0,0,.3);border-radius:12px;border:1px solid var(--border)}
+.tip{padding:6px;margin-bottom:6px;background:rgba(255,255,255,.05);border-radius:6px;font-size:.82rem}
+.footer{text-align:center;margin-top:24px;padding-top:12px;border-top:1px solid var(--border);color:var(--muted);font-size:.78rem}
+.last-up{text-align:center;margin-top:12px;color:var(--muted);font-size:.75rem}
+
+@media (max-width: 1024px) { .g2, .g21 { grid-template-columns: 1fr; gap: 16px; } }
+@media (max-width: 768px) {
+  body { padding: 8px; }
+  .header h1 { font-size: 1.6rem; letter-spacing: 1px; }
+  .panel { padding: 14px; border-radius: 12px; }
+  .g5 { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .prow { flex-direction: column; align-items: stretch; gap: 10px; }
+  .pf { width: 100%; }
+  select, input[type=number], input[type=text] { width: 100%; }
+  .apply-btn { width: 100%; }
+}
+@media (max-width: 480px) {
+  .header h1 { font-size: 1.35rem; }
+  .g2m { grid-template-columns: 1fr; }
+  .g5 { grid-template-columns: repeat(2, 1fr); }
+  .mv { font-size: 1.6rem; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <h1>MONOJOG</h1>
+  <div class="sub">ADVANCED NEURO ANALYTICS PLATFORM</div>
+</div>
+
+<!-- Source URL Switcher -->
+<div class="source-bar">
+  <span>Data Source URL:</span>
+  <input type="text" id="streamUrl" class="source-input" placeholder="e.g. https://your-tunnel.trycloudflare.com">
+  <button class="apply-btn" onclick="saveTargetUrl()" style="padding:6px 14px;">Connect</button>
+  <span id="sourceBadge" class="age-badge" style="border-radius:12px;padding:4px 10px;">Simulation Mode</span>
+</div>
+
+<!-- PROFILE -->
+<div class="panel">
+  <div class="ph">
+    <div class="pt">&#9881; User Profile <span id="pBadge" class="p-badge">Demo Guest</span></div>
+    <div class="si"><div class="dot ok-dot"></div><span>Brainwave Calibration Active</span></div>
+  </div>
+  <div class="prow">
+    <div class="pf"><div class="pl">Name</div><input type="text" id="nameIn" value="Guest"></div>
+    <div class="pf"><div class="pl">Gender</div>
+      <select id="genderSel"><option value="0">&#9794; Male</option><option value="1">&#9792; Female</option><option value="2">Other</option></select>
+    </div>
+    <div class="pf"><div class="pl">Age</div><input type="number" id="ageIn" min="5" max="100" value="25"></div>
+    <div class="pf"><div class="pl">Age Group</div><div id="ageGrp" class="age-badge">Adult (18-59)</div></div>
+    <div class="pf"><button class="apply-btn" onclick="applyLocalProfile()">Apply Profile</button></div>
+  </div>
+</div>
+
+<!-- ROW 1 -->
+<div class="g2">
+  <div class="panel">
+    <div class="ph">
+      <div class="pt">Raw EEG Signal</div>
+      <div class="si"><div id="sigDot" class="dot ok-dot"></div><span id="sigTxt">Live Signal</span></div>
+    </div>
+    <div class="eeg-wrap"><canvas id="rawEegGraph"></canvas></div>
+    <div class="raw-info">Raw EEG: <span id="rawVal">0</span> &mu;V &nbsp;|&nbsp; 512 Hz &nbsp;|&nbsp; Oscilloscope</div>
+    <div class="g2m">
+      <div class="mc"><div class="ml">Signal Quality</div><div class="mv" id="sigPct">100%</div><div class="prog"><div id="sigBar" class="bar sig-bar" style="width:100%"></div></div></div>
+      <div class="mc"><div class="ml">Electrode Contact</div><div class="mv" id="elPct">100%</div><div class="prog"><div id="elBar" class="bar sig-bar" style="width:100%"></div></div></div>
+    </div>
+    <div id="dqDiv" class="dq dq-ok">High fidelity EEG stream active</div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">
+      <div class="pt">Cognitive Metrics</div>
+      <div class="si"><div id="cogDot" class="dot ok-dot"></div><span>Brain Activity</span></div>
+    </div>
+    <div class="g2m">
+      <div class="mc"><div class="ml">Attention</div><div class="mv" id="attVal">68</div><div class="prog"><div id="attBar" class="bar att-bar" style="width:68%"></div></div></div>
+      <div class="mc"><div class="ml">Meditation</div><div class="mv" id="medVal">54</div><div class="prog"><div id="medBar" class="bar med-bar" style="width:54%"></div></div></div>
+    </div>
+    <div class="alert-bar">
+      <div style="font-size:.86rem;color:var(--muted)">Focus Alert:</div>
+      <button id="alertBtn" class="abtn" onclick="toggleAlert()">ON</button>
+      <div id="alertSt" style="font-size:.86rem;color:var(--muted)">Alerts Active</div>
+    </div>
+    <div class="conn-box">
+      <div class="conn-msg" id="connSt">Excellent Signal Quality</div>
+      <div class="el-st"><div id="elDot" class="dot ok-dot"></div><span id="elTxt">Electrode Connected</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 2 -->
+<div class="g21">
+  <div class="panel">
+    <div class="ph"><div class="pt">EEG Frequency Analysis</div><div class="si"><div id="freqDot" class="dot ok-dot"></div><span>Wave Spectrum</span></div></div>
+    <div class="freq-wrap"><canvas id="freqChart"></canvas></div>
+    <div class="g5">
+      <div class="fcard"><div class="fl">Delta</div><div class="fv" id="deltaV">12%</div><div class="prog"><div id="deltaB" class="bar" style="width:12%;background:#4FD1C7"></div></div></div>
+      <div class="fcard"><div class="fl">Theta</div><div class="fv" id="thetaV">18%</div><div class="prog"><div id="thetaB" class="bar" style="width:18%;background:#38B2AC"></div></div></div>
+      <div class="fcard"><div class="fl">Alpha</div><div class="fv" id="alphaV">36%</div><div class="prog"><div id="alphaB" class="bar" style="width:36%;background:#319795"></div></div></div>
+      <div class="fcard"><div class="fl">Beta</div><div class="fv" id="betaV">24%</div><div class="prog"><div id="betaB" class="bar" style="width:24%;background:#2C7A7B"></div></div></div>
+      <div class="fcard"><div class="fl">Gamma</div><div class="fv" id="gammaV">10%</div><div class="prog"><div id="gammaB" class="bar" style="width:10%;background:#285E61"></div></div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><div class="pt">Emotional State</div><div class="si"><div id="emoDot" class="dot ok-dot"></div><span>Real-time Mood</span></div></div>
+    <div class="em-list">
+      <div class="em"><div class="em-hd"><div class="em-name">Happiness</div><div class="em-val" id="happV">65%</div></div><div class="spedo"><div id="happF" class="sf happy-f" style="width:65%"></div></div></div>
+      <div class="em"><div class="em-hd"><div class="em-name">Excitement</div><div class="em-val" id="excV">42%</div></div><div class="spedo"><div id="excF" class="sf exc-f" style="width:42%"></div></div></div>
+      <div class="em"><div class="em-hd"><div class="em-name">Calmness</div><div class="em-val" id="calmV">70%</div></div><div class="spedo"><div id="calmF" class="sf calm-f" style="width:70%"></div></div></div>
+      <div class="em"><div class="em-hd"><div class="em-name">Stress Level</div><div class="em-val" id="strV">18%</div></div><div class="spedo"><div id="strF" class="sf str-f" style="width:18%"></div></div></div>
+      <div class="em"><div class="em-hd"><div class="em-name">Focus</div><div class="em-val" id="focV">68%</div></div><div class="spedo"><div id="focF" class="sf foc-f" style="width:68%"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 3 -->
+<div class="g2">
+  <div class="panel">
+    <div class="ph"><div class="pt">Focus Enhancement</div><div class="si"><div class="dot ok-dot"></div><span>Improve Attention</span></div></div>
+    <div class="il">
+      <div class="ii"><span class="in">1</span>Maintain comfortable posture with straight back</div>
+      <div class="ii"><span class="in">2</span>Breathe deeply and evenly through your nose</div>
+      <div class="ii"><span class="in">3</span>Minimise eye movement and blinking</div>
+      <div class="ii"><span class="in">4</span>Focus on a single point or continuous thought</div>
+    </div>
+    <div class="tips">
+      <div class="tip"><strong>Status:</strong> <span id="focSt" style="color:var(--ok)">Optimal Focus</span></div>
+      <div class="tip"><strong>Advice:</strong> <span id="focRec">Maintain your present focus state</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><div class="pt">Hardware Diagnostics</div><div class="si"><div class="dot ok-dot"></div><span>Status Guide</span></div></div>
+    <div class="il">
+      <div class="ii" style="border-left-color:var(--ok)"><strong>GREEN LED:</strong> High Focus (&ge; 60%)</div>
+      <div class="ii" style="border-left-color:var(--warn)"><strong>YELLOW LED:</strong> Moderate Focus (30–59%)</div>
+      <div class="ii" style="border-left-color:var(--danger)"><strong>RED LED:</strong> Low Focus / Poor Contact</div>
+    </div>
+  </div>
+</div>
+
+<div class="last-up">Last update: <span id="lastUp">Live</span></div>
+<div class="footer">Monojog &copy; 2026 &nbsp;&middot;&nbsp; Advanced Neuro Analytics Platform</div>
+</div>
+
+<script>
+let alertEnabled = true;
+let baseUrl = localStorage.getItem('monojog_url') || '';
+let isDemo = true;
+let globalTime = 0;
+let simAtt = 65, simMed = 50;
+
+if (baseUrl) document.getElementById('streamUrl').value = baseUrl;
+
+function saveTargetUrl() {
+  let val = document.getElementById('streamUrl').value.trim();
+  if (val.endsWith('/')) val = val.slice(0, -1);
+  localStorage.setItem('monojog_url', val);
+  baseUrl = val;
+  fetchData();
+}
+
+function toggleAlert() {
+  alertEnabled = !alertEnabled;
+  document.getElementById('alertBtn').textContent = alertEnabled ? 'ON' : 'OFF';
+  document.getElementById('alertBtn').classList.toggle('off', !alertEnabled);
+  document.getElementById('alertSt').textContent  = alertEnabled ? 'Alerts Active' : 'Alerts Disabled';
+}
+
+const rawCvs = document.getElementById('rawEegGraph');
+const rawCtx = rawCvs.getContext('2d');
+const RAW_BUF = 800;
+let rawBuf = new Array(RAW_BUF).fill(0);
+let freqData = { delta:12, theta:18, alpha:36, beta:24, gammaWave:10 };
+
+function drawRawEeg() {
+  const w = Math.max(rawCvs.parentElement.offsetWidth || 0, 100);
+  const h = Math.max(rawCvs.parentElement.offsetHeight || 0, 80);
+  if (rawCvs.width !== w || rawCvs.height !== h) { rawCvs.width = w; rawCvs.height = h; }
+
+  rawCtx.fillStyle = '#0a0e1a';
+  rawCtx.fillRect(0, 0, w, h);
+
+  rawCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+  rawCtx.lineWidth = 1;
+  for (let c = 0; c <= 8; c++) {
+    let gx = Math.round(w * c / 8) + 0.5;
+    rawCtx.beginPath(); rawCtx.moveTo(gx,0); rawCtx.lineTo(gx,h); rawCtx.stroke();
+  }
+
+  for (let step = 0; step < 4; step++) {
+    globalTime += 0.0125;
+    let sig = (freqData.delta * Math.sin(globalTime * 3) +
+               freqData.alpha * Math.sin(globalTime * 10) +
+               freqData.beta  * Math.sin(globalTime * 20)) * 0.8;
+    let noise = (Math.random() - 0.5) * 6;
+    rawBuf.push(sig + noise);
+    if (rawBuf.length > RAW_BUF) rawBuf.shift();
+  }
+
+  document.getElementById('rawVal').textContent = Math.round(rawBuf[rawBuf.length - 1]);
+
+  rawCtx.shadowBlur = 8; rawCtx.shadowColor = '#48dd78';
+  rawCtx.strokeStyle = '#48dd78'; rawCtx.lineWidth = 1.8; rawCtx.beginPath();
+  let started = false;
+  for (let i = 0; i < rawBuf.length; i++) {
+    let x = (i / rawBuf.length) * w;
+    let y = h / 2 - (rawBuf[i] * (h / 200));
+    if (!started) { rawCtx.moveTo(x,y); started = true; }
+    else rawCtx.lineTo(x,y);
+  }
+  rawCtx.stroke(); rawCtx.shadowBlur = 0;
+}
+
+const fCvs = document.getElementById('freqChart');
+const fCtx = fCvs.getContext('2d');
+
+function drawFreq() {
+  const w = Math.max(fCvs.parentElement.clientWidth||0,80), h = Math.max(fCvs.parentElement.clientHeight||0,80);
+  if (fCvs.width !== w || fCvs.height !== h) { fCvs.width = w; fCvs.height = h; }
+  fCtx.clearRect(0, 0, w, h);
+  fCtx.fillStyle = 'rgba(0,0,0,0.35)'; fCtx.fillRect(0,0,w,h);
+
+  const pd = 42, cW = w-pd*2, cH = h-pd*2;
+  const bands = [
+    {n:'Delta',v:freqData.delta,c:'#4FD1C7'},
+    {n:'Theta',v:freqData.theta,c:'#38B2AC'},
+    {n:'Alpha',v:freqData.alpha,c:'#319795'},
+    {n:'Beta', v:freqData.beta, c:'#2C7A7B'},
+    {n:'Gamma',v:freqData.gammaWave,c:'#285E61'}
+  ];
+
+  const bW = cW/bands.length*0.70;
+  const sp = (cW - bW*bands.length)/(bands.length+1);
+  bands.forEach((b,i) => {
+    let x = pd+sp+i*(bW+sp);
+    let bH = (b.v/100)*cH;
+    let y = pd+cH-bH;
+    fCtx.fillStyle = b.c;
+    fCtx.fillRect(x, y, bW, bH);
+    fCtx.fillStyle='#e2e8f0'; fCtx.font='11px sans-serif'; fCtx.textAlign='center';
+    fCtx.fillText(b.n, x+bW/2, h-pd+15);
+    fCtx.fillText(b.v.toFixed(1)+'%', x+bW/2, y-4);
+  });
+}
+
+function updateUI(d) {
+  document.getElementById('attVal').textContent = d.attention;
+  document.getElementById('medVal').textContent = d.meditation;
+  document.getElementById('attBar').style.width = d.attention + '%';
+  document.getElementById('medBar').style.width = d.meditation + '%';
+  document.getElementById('connSt').textContent = d.connectionStatus;
+
+  freqData = { delta:d.delta, theta:d.theta, alpha:d.alpha, beta:d.beta, gammaWave:d.gammaWave };
+  document.getElementById('deltaV').textContent = d.delta.toFixed(1) + '%';
+  document.getElementById('thetaV').textContent = d.theta.toFixed(1) + '%';
+  document.getElementById('alphaV').textContent = d.alpha.toFixed(1) + '%';
+  document.getElementById('betaV').textContent  = d.beta.toFixed(1) + '%';
+  document.getElementById('gammaV').textContent = d.gammaWave.toFixed(1) + '%';
+
+  document.getElementById('deltaB').style.width = d.delta + '%';
+  document.getElementById('thetaB').style.width = d.theta + '%';
+  document.getElementById('alphaB').style.width = d.alpha + '%';
+  document.getElementById('betaB').style.width  = d.beta + '%';
+  document.getElementById('gammaB').style.width = d.gammaWave + '%';
+
+  document.getElementById('happV').textContent = d.happiness + '%';
+  document.getElementById('excV').textContent  = d.excitement + '%';
+  document.getElementById('calmV').textContent = d.calmness + '%';
+  document.getElementById('strV').textContent  = d.stress + '%';
+  document.getElementById('focV').textContent  = d.focus + '%';
+
+  document.getElementById('happF').style.width = d.happiness + '%';
+  document.getElementById('excF').style.width  = d.excitement + '%';
+  document.getElementById('calmF').style.width = d.calmness + '%';
+  document.getElementById('strF').style.width  = d.stress + '%';
+  document.getElementById('focF').style.width  = d.focus + '%';
+
+  document.getElementById('lastUp').textContent = new Date().toLocaleTimeString();
+}
+
+function runSimulation() {
+  document.getElementById('sourceBadge').textContent = 'Simulation Mode';
+  document.getElementById('sourceBadge').style.borderColor = 'var(--accent)';
+  
+  simAtt = Math.max(20, Math.min(95, simAtt + Math.floor((Math.random() - 0.48) * 8)));
+  simMed = Math.max(15, Math.min(90, simMed + Math.floor((Math.random() - 0.5) * 6)));
+
+  updateUI({
+    attention: simAtt,
+    meditation: simMed,
+    connectionStatus: "Demo Live Signal Quality",
+    delta: 10 + Math.random()*5,
+    theta: 15 + Math.random()*4,
+    alpha: 35 + (simMed*0.1),
+    beta: 20 + (simAtt*0.1),
+    gammaWave: 8 + Math.random()*3,
+    happiness: Math.round(55 + Math.random()*15),
+    excitement: Math.round(40 + Math.random()*12),
+    calmness: simMed,
+    stress: Math.max(5, 100 - simMed),
+    focus: simAtt
+  });
+}
+
+function fetchData() {
+  if (!baseUrl) {
+    runSimulation();
+    return;
+  }
+
+  fetch(baseUrl + '/data', { mode: 'cors' })
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById('sourceBadge').textContent = 'Live Headband';
+      document.getElementById('sourceBadge').style.borderColor = 'var(--ok)';
+      updateUI(data);
+    })
+    .catch(() => {
+      runSimulation();
+    });
+}
+
+function applyLocalProfile() {
+  const name = document.getElementById('nameIn').value;
+  const age = document.getElementById('ageIn').value;
+  document.getElementById('pBadge').textContent = name + ', Age ' + age;
+}
+
+setInterval(() => { drawRawEeg(); drawFreq(); }, 50);
+setInterval(fetchData, 2000);
+fetchData();
+</script>
+</body>
+</html>
