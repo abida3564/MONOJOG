@@ -27,13 +27,14 @@ body{
   background:linear-gradient(90deg,var(--accent),var(--accent2));
   -webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .header .sub{color:var(--muted);font-size:.85rem;letter-spacing:1px}
+
 .source-bar{
   display:flex;justify-content:center;align-items:center;gap:10px;
   margin-bottom:16px;flex-wrap:wrap;font-size:.82rem;
 }
 .source-input{
   background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);
-  border-radius:20px;color:var(--text);padding:6px 14px;outline:none;width:300px;
+  border-radius:20px;color:var(--text);padding:6px 14px;outline:none;width:320px;
 }
 .panel{
   background:var(--panel);backdrop-filter:blur(10px);
@@ -170,7 +171,6 @@ canvas{display:block;width:100%!important;height:100%!important}
   <div class="sub">ADVANCED NEURO ANALYTICS PLATFORM</div>
 </div>
 
-<!-- Source URL Switcher -->
 <div class="source-bar">
   <span>Data Source URL:</span>
   <input type="text" id="streamUrl" class="source-input" placeholder="e.g. https://your-tunnel.trycloudflare.com">
@@ -178,7 +178,6 @@ canvas{display:block;width:100%!important;height:100%!important}
   <span id="sourceBadge" class="age-badge" style="border-radius:12px;padding:4px 10px;">Simulation Mode</span>
 </div>
 
-<!-- PROFILE -->
 <div class="panel">
   <div class="ph">
     <div class="pt">&#9881; User Profile <span id="pBadge" class="p-badge">Demo Guest</span></div>
@@ -195,7 +194,6 @@ canvas{display:block;width:100%!important;height:100%!important}
   </div>
 </div>
 
-<!-- ROW 1 -->
 <div class="g2">
   <div class="panel">
     <div class="ph">
@@ -232,7 +230,6 @@ canvas{display:block;width:100%!important;height:100%!important}
   </div>
 </div>
 
-<!-- ROW 2 -->
 <div class="g21">
   <div class="panel">
     <div class="ph"><div class="pt">EEG Frequency Analysis</div><div class="si"><div id="freqDot" class="dot ok-dot"></div><span>Wave Spectrum</span></div></div>
@@ -258,7 +255,6 @@ canvas{display:block;width:100%!important;height:100%!important}
   </div>
 </div>
 
-<!-- ROW 3 -->
 <div class="g2">
   <div class="panel">
     <div class="ph"><div class="pt">Focus Enhancement</div><div class="si"><div class="dot ok-dot"></div><span>Improve Attention</span></div></div>
@@ -291,7 +287,6 @@ canvas{display:block;width:100%!important;height:100%!important}
 <script>
 let alertEnabled = true;
 let baseUrl = localStorage.getItem('monojog_url') || '';
-let isDemo = true;
 let globalTime = 0;
 let simAtt = 65, simMed = 50;
 
@@ -425,9 +420,12 @@ function updateUI(d) {
 }
 
 function runSimulation() {
-  document.getElementById('sourceBadge').textContent = 'Simulation Mode';
-  document.getElementById('sourceBadge').style.borderColor = 'var(--accent)';
-  
+  const badge = document.getElementById('sourceBadge');
+  badge.textContent = 'Simulation Mode';
+  badge.style.color = 'var(--accent)';
+  badge.style.borderColor = 'var(--accent)';
+  badge.style.background = 'rgba(74,144,226,.18)';
+
   simAtt = Math.max(20, Math.min(95, simAtt + Math.floor((Math.random() - 0.48) * 8)));
   simMed = Math.max(15, Math.min(90, simMed + Math.floor((Math.random() - 0.5) * 6)));
 
@@ -454,11 +452,17 @@ function fetchData() {
     return;
   }
 
-  fetch(baseUrl + '/data', { mode: 'cors' })
-    .then(res => res.json())
+  fetch(baseUrl + '/data')
+    .then(res => {
+      if (!res.ok) throw new Error();
+      return res.json();
+    })
     .then(data => {
-      document.getElementById('sourceBadge').textContent = 'Live Headband';
-      document.getElementById('sourceBadge').style.borderColor = 'var(--ok)';
+      const badge = document.getElementById('sourceBadge');
+      badge.textContent = 'Live Headband';
+      badge.style.color = 'var(--ok)';
+      badge.style.borderColor = 'var(--ok)';
+      badge.style.background = 'rgba(72,187,120,.18)';
       updateUI(data);
     })
     .catch(() => {
