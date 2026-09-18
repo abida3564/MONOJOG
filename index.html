@@ -290,252 +290,273 @@ canvas{display:block;width:100%!important;height:100%!important}
 </div>
 
 <script>
-let alertEnabled = true;
-let baseUrl = localStorage.getItem('monojog_url') || '';
-let globalTime = 0;
-let simAtt = 65, simMed = 50;
+  // ─── GOOGLE SHEETS CLOUD DATABASE CONFIG ───
+  const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyr0-aKq1dun8u0LQDS_mfRgHkq9llnzAkRJkFNh9inawV7MvCY22KmHz0aSvvIjpmvAQ/exec";
+  
+  let lastCloudSync = 0;
+  let baseUrl = localStorage.getItem('monojog_url') || '';
+  let globalTime = 0;
+  let simAtt = 65, simMed = 50;
 
-if (baseUrl) document.getElementById('streamUrl').value = baseUrl;
+  if (baseUrl) document.getElementById('streamUrl').value = baseUrl;
 
-function saveTargetUrl() {
-  let val = document.getElementById('streamUrl').value.trim();
-  if (val.endsWith('/')) val = val.slice(0, -1);
-  localStorage.setItem('monojog_url', val);
-  baseUrl = val;
-  fetchData();
-}
-
-function toggleAlert() {
-  alertEnabled = !alertEnabled;
-  document.getElementById('alertBtn').textContent = alertEnabled ? 'ON' : 'OFF';
-  document.getElementById('alertBtn').classList.toggle('off', !alertEnabled);
-  document.getElementById('alertSt').textContent  = alertEnabled ? 'Alerts Active' : 'Alerts Disabled';
-}
-
-const rawCvs = document.getElementById('rawEegGraph');
-const rawCtx = rawCvs.getContext('2d');
-const RAW_BUF = 800;
-let rawBuf = new Array(RAW_BUF).fill(0);
-let freqData = { delta:12, theta:18, alpha:36, beta:24, gammaWave:10 };
-
-function drawRawEeg() {
-  const w = Math.max(rawCvs.parentElement.offsetWidth || 0, 100);
-  const h = Math.max(rawCvs.parentElement.offsetHeight || 0, 80);
-  if (rawCvs.width !== w || rawCvs.height !== h) { rawCvs.width = w; rawCvs.height = h; }
-
-  rawCtx.fillStyle = '#0a0e1a';
-  rawCtx.fillRect(0, 0, w, h);
-
-  rawCtx.strokeStyle = 'rgba(255,255,255,0.06)';
-  rawCtx.lineWidth = 1;
-  for (let c = 0; c <= 8; c++) {
-    let gx = Math.round(w * c / 8) + 0.5;
-    rawCtx.beginPath(); rawCtx.moveTo(gx,0); rawCtx.lineTo(gx,h); rawCtx.stroke();
+  function saveTargetUrl() {
+    let val = document.getElementById('streamUrl').value.trim();
+    if (val.endsWith('/')) val = val.slice(0, -1);
+    localStorage.setItem('monojog_url', val);
+    baseUrl = val;
+    fetchData();
   }
 
-  for (let step = 0; step < 4; step++) {
-    globalTime += 0.0125;
-    let sig = (freqData.delta * Math.sin(globalTime * 3) +
-               freqData.alpha * Math.sin(globalTime * 10) +
-               freqData.beta  * Math.sin(globalTime * 20)) * 0.8;
-    let noise = (Math.random() - 0.5) * 6;
-    rawBuf.push(sig + noise);
-    if (rawBuf.length > RAW_BUF) rawBuf.shift();
+  // ─── RAW EEG OSCILLOSCOPE ───
+  const rawCvs = document.getElementById('rawEegGraph');
+  const rawCtx = rawCvs.getContext('2d');
+  const RAW_BUF = 800;
+  let rawBuf = new Array(RAW_BUF).fill(0);
+  let freqData = { delta:12, theta:18, alpha:36, beta:24, gammaWave:10 };
+
+  function drawRawEeg() {
+    const w = Math.max(rawCvs.parentElement.offsetWidth || 0, 100);
+    const h = Math.max(rawCvs.parentElement.offsetHeight || 0, 80);
+    if (rawCvs.width !== w || rawCvs.height !== h) { rawCvs.width = w; rawCvs.height = h; }
+
+    rawCtx.fillStyle = '#0a0e1a';
+    rawCtx.fillRect(0, 0, w, h);
+
+    rawCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+    rawCtx.lineWidth = 1;
+    for (let c = 0; c <= 8; c++) {
+      let gx = Math.round(w * c / 8) + 0.5;
+      rawCtx.beginPath(); rawCtx.moveTo(gx,0); rawCtx.lineTo(gx,h); rawCtx.stroke();
+    }
+
+    for (let step = 0; step < 4; step++) {
+      globalTime += 0.0125;
+      let sig = (freqData.delta * Math.sin(globalTime * 3) +
+                 freqData.alpha * Math.sin(globalTime * 10) +
+                 freqData.beta  * Math.sin(globalTime * 20)) * 0.8;
+      let noise = (Math.random() - 0.5) * 6;
+      rawBuf.push(sig + noise);
+      if (rawBuf.length > RAW_BUF) rawBuf.shift();
+    }
+
+    document.getElementById('rawVal').textContent = Math.round(rawBuf[rawBuf.length - 1]);
+
+    rawCtx.shadowBlur = 8; rawCtx.shadowColor = '#48dd78';
+    rawCtx.strokeStyle = '#48dd78'; rawCtx.lineWidth = 1.8; rawCtx.beginPath();
+    let started = false;
+    for (let i = 0; i < rawBuf.length; i++) {
+      let x = (i / rawBuf.length) * w;
+      let y = h / 2 - (rawBuf[i] * (h / 200));
+      if (!started) { rawCtx.moveTo(x,y); started = true; }
+      else rawCtx.lineTo(x,y);
+    }
+    rawCtx.stroke(); rawCtx.shadowBlur = 0;
   }
 
-  document.getElementById('rawVal').textContent = Math.round(rawBuf[rawBuf.length - 1]);
+  // ─── FREQUENCY BANDS CHART ───
+  const fCvs = document.getElementById('freqChart');
+  const fCtx = fCvs.getContext('2d');
 
-  rawCtx.shadowBlur = 8; rawCtx.shadowColor = '#48dd78';
-  rawCtx.strokeStyle = '#48dd78'; rawCtx.lineWidth = 1.8; rawCtx.beginPath();
-  let started = false;
-  for (let i = 0; i < rawBuf.length; i++) {
-    let x = (i / rawBuf.length) * w;
-    let y = h / 2 - (rawBuf[i] * (h / 200));
-    if (!started) { rawCtx.moveTo(x,y); started = true; }
-    else rawCtx.lineTo(x,y);
+  function drawFreq() {
+    const w = Math.max(fCvs.parentElement.clientWidth||0,80), h = Math.max(fCvs.parentElement.clientHeight||0,80);
+    if (fCvs.width !== w || fCvs.height !== h) { fCvs.width = w; fCvs.height = h; }
+    fCtx.clearRect(0, 0, w, h);
+    fCtx.fillStyle = 'rgba(0,0,0,0.35)'; fCtx.fillRect(0,0,w,h);
+
+    const pd = 42, cW = w-pd*2, cH = h-pd*2;
+    const bands = [
+      {n:'Delta',v:freqData.delta,c:'#4FD1C7'},
+      {n:'Theta',v:freqData.theta,c:'#38B2AC'},
+      {n:'Alpha',v:freqData.alpha,c:'#319795'},
+      {n:'Beta', v:freqData.beta, c:'#2C7A7B'},
+      {n:'Gamma',v:freqData.gammaWave,c:'#285E61'}
+    ];
+
+    const bW = cW/bands.length*0.70;
+    const sp = (cW - bW*bands.length)/(bands.length+1);
+    bands.forEach((b,i) => {
+      let x = pd+sp+i*(bW+sp);
+      let bH = (b.v/100)*cH;
+      let y = pd+cH-bH;
+      fCtx.fillStyle = b.c;
+      fCtx.fillRect(x, y, bW, bH);
+      fCtx.fillStyle='#e2e8f0'; fCtx.font='11px sans-serif'; fCtx.textAlign='center';
+      fCtx.fillText(b.n, x+bW/2, h-pd+15);
+      fCtx.fillText(b.v.toFixed(1)+'%', x+bW/2, y-4);
+    });
   }
-  rawCtx.stroke(); rawCtx.shadowBlur = 0;
-}
 
-const fCvs = document.getElementById('freqChart');
-const fCtx = fCvs.getContext('2d');
-
-function drawFreq() {
-  const w = Math.max(fCvs.parentElement.clientWidth||0,80), h = Math.max(fCvs.parentElement.clientHeight||0,80);
-  if (fCvs.width !== w || fCvs.height !== h) { fCvs.width = w; fCvs.height = h; }
-  fCtx.clearRect(0, 0, w, h);
-  fCtx.fillStyle = 'rgba(0,0,0,0.35)'; fCtx.fillRect(0,0,w,h);
-
-  const pd = 42, cW = w-pd*2, cH = h-pd*2;
-  const bands = [
-    {n:'Delta',v:freqData.delta,c:'#4FD1C7'},
-    {n:'Theta',v:freqData.theta,c:'#38B2AC'},
-    {n:'Alpha',v:freqData.alpha,c:'#319795'},
-    {n:'Beta', v:freqData.beta, c:'#2C7A7B'},
-    {n:'Gamma',v:freqData.gammaWave,c:'#285E61'}
-  ];
-
-  const bW = cW/bands.length*0.70;
-  const sp = (cW - bW*bands.length)/(bands.length+1);
-  bands.forEach((b,i) => {
-    let x = pd+sp+i*(bW+sp);
-    let bH = (b.v/100)*cH;
-    let y = pd+cH-bH;
-    fCtx.fillStyle = b.c;
-    fCtx.fillRect(x, y, bW, bH);
-    fCtx.fillStyle='#e2e8f0'; fCtx.font='11px sans-serif'; fCtx.textAlign='center';
-    fCtx.fillText(b.n, x+bW/2, h-pd+15);
-    fCtx.fillText(b.v.toFixed(1)+'%', x+bW/2, y-4);
-  });
-}
-
+  // ─── UI & DASHBOARD UPDATER ───
   function updateUI(d) {
-  document.getElementById('attVal').textContent = d.attention;
-  document.getElementById('medVal').textContent = d.meditation;
-  document.getElementById('attBar').style.width = d.attention + '%';
-  document.getElementById('medBar').style.width = d.meditation + '%';
-  document.getElementById('connSt').textContent = d.connectionStatus;
+    document.getElementById('attVal').textContent = d.attention;
+    document.getElementById('medVal').textContent = d.meditation;
+    document.getElementById('attBar').style.width = d.attention + '%';
+    document.getElementById('medBar').style.width = d.meditation + '%';
+    document.getElementById('connSt').textContent = d.connectionStatus;
 
-  // ─── SIGNAL QUALITY & ELECTRODE CONTACT FIX ───
-  // ThinkGear: 0 means 100% Quality, 200 means 0% Quality
-  let rawSig = (typeof d.poorSignal !== 'undefined') ? d.poorSignal : 200;
-  let sigPercent = Math.max(0, Math.min(100, Math.round(((200 - rawSig) / 200) * 100)));
-  
-  document.getElementById('sigPct').textContent = sigPercent + '%';
-  document.getElementById('sigBar').style.width = sigPercent + '%';
-  document.getElementById('elPct').textContent = sigPercent + '%';
-  document.getElementById('elBar').style.width = sigPercent + '%';
+    let rawSig = (typeof d.poorSignal !== 'undefined') ? d.poorSignal : 200;
+    let sigPercent = Math.max(0, Math.min(100, Math.round(((200 - rawSig) / 200) * 100)));
+    
+    document.getElementById('sigPct').textContent = sigPercent + '%';
+    document.getElementById('sigBar').style.width = sigPercent + '%';
+    document.getElementById('elPct').textContent = sigPercent + '%';
+    document.getElementById('elBar').style.width = sigPercent + '%';
 
-  // Status message dynamic 
-  let dqDiv = document.getElementById('dqDiv');
-  if (sigPercent >= 80) {
-    dqDiv.className = 'dq dq-ok';
-    dqDiv.textContent = 'High fidelity EEG stream active';
-  } else if (sigPercent >= 40) {
-    dqDiv.className = 'dq dq-warn';
-    dqDiv.textContent = 'Fair Signal - Micro-noise detected';
-  } else {
-    dqDiv.className = 'dq dq-bad';
-    dqDiv.textContent = 'Poor Contact - Adjust Headband';
+    let dqDiv = document.getElementById('dqDiv');
+    if (sigPercent >= 80) {
+      dqDiv.className = 'dq dq-ok';
+      dqDiv.textContent = 'High fidelity EEG stream active';
+    } else if (sigPercent >= 40) {
+      dqDiv.className = 'dq dq-warn';
+      dqDiv.textContent = 'Fair Signal - Micro-noise detected';
+    } else {
+      dqDiv.className = 'dq dq-bad';
+      dqDiv.textContent = 'Poor Contact - Adjust Headband';
+    }
+
+    freqData = { delta:d.delta, theta:d.theta, alpha:d.alpha, beta:d.beta, gammaWave:d.gammaWave };
+    document.getElementById('deltaV').textContent = d.delta.toFixed(1) + '%';
+    document.getElementById('thetaV').textContent = d.theta.toFixed(1) + '%';
+    document.getElementById('alphaV').textContent = d.alpha.toFixed(1) + '%';
+    document.getElementById('betaV').textContent  = d.beta.toFixed(1) + '%';
+    document.getElementById('gammaV').textContent = d.gammaWave.toFixed(1) + '%';
+
+    document.getElementById('deltaB').style.width = d.delta + '%';
+    document.getElementById('thetaB').style.width = d.theta + '%';
+    document.getElementById('alphaB').style.width = d.alpha + '%';
+    document.getElementById('betaB').style.width  = d.beta + '%';
+    document.getElementById('gammaB').style.width = d.gammaWave + '%';
+
+    document.getElementById('happV').textContent = d.happiness + '%';
+    document.getElementById('excV').textContent  = d.excitement + '%';
+    document.getElementById('calmV').textContent = d.calmness + '%';
+    document.getElementById('strV').textContent  = d.stress + '%';
+    document.getElementById('focV').textContent  = d.focus + '%';
+
+    document.getElementById('happF').style.width = d.happiness + '%';
+    document.getElementById('excF').style.width  = d.excitement + '%';
+    document.getElementById('calmF').style.width = d.calmness + '%';
+    document.getElementById('strF').style.width  = d.stress + '%';
+    document.getElementById('focF').style.width  = d.focus + '%';
+
+    document.getElementById('lastUp').textContent = new Date().toLocaleTimeString();
+
+    // ─── GOOGLE SHEETS REAL-TIME SYNC (EVERY 5 SECONDS) ───
+    if (Date.now() - lastCloudSync > 5000 && d.poorSignal < 150) {
+      lastCloudSync = Date.now();
+      fetch(GOOGLE_SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userName: document.getElementById('nameIn') ? document.getElementById('nameIn').value : (d.userName || "Guest"),
+          userAge: document.getElementById('ageIn') ? document.getElementById('ageIn').value : (d.userAge || 25),
+          userGender: document.getElementById('genderSel') ? document.getElementById('genderSel').value : (d.userGender || 0),
+          attention: d.attention,
+          meditation: d.meditation,
+          poorSignal: d.poorSignal,
+          delta: d.delta,
+          theta: d.theta,
+          alpha: d.alpha,
+          beta: d.beta,
+          gammaWave: d.gammaWave,
+          focus: d.focus
+        })
+      }).catch(e => console.log("Cloud sync error:", e));
+    }
   }
 
-  // ─── FREQUENCY BANDS ───
-  freqData = { delta:d.delta, theta:d.theta, alpha:d.alpha, beta:d.beta, gammaWave:d.gammaWave };
-  document.getElementById('deltaV').textContent = d.delta.toFixed(1) + '%';
-  document.getElementById('thetaV').textContent = d.theta.toFixed(1) + '%';
-  document.getElementById('alphaV').textContent = d.alpha.toFixed(1) + '%';
-  document.getElementById('betaV').textContent  = d.beta.toFixed(1) + '%';
-  document.getElementById('gammaV').textContent = d.gammaWave.toFixed(1) + '%';
+  // ─── SIMULATION FALLBACK ───
+  function runSimulation() {
+    const badge = document.getElementById('sourceBadge');
+    badge.textContent = 'Simulation Mode';
+    badge.style.color = 'var(--accent)';
+    badge.style.borderColor = 'var(--accent)';
+    badge.style.background = 'rgba(74,144,226,.18)';
 
-  document.getElementById('deltaB').style.width = d.delta + '%';
-  document.getElementById('thetaB').style.width = d.theta + '%';
-  document.getElementById('alphaB').style.width = d.alpha + '%';
-  document.getElementById('betaB').style.width  = d.beta + '%';
-  document.getElementById('gammaB').style.width = d.gammaWave + '%';
+    simAtt = Math.max(20, Math.min(95, simAtt + Math.floor((Math.random() - 0.48) * 8)));
+    simMed = Math.max(15, Math.min(90, simMed + Math.floor((Math.random() - 0.5) * 6)));
 
-  // ─── EMOTIONS ───
-  document.getElementById('happV').textContent = d.happiness + '%';
-  document.getElementById('excV').textContent  = d.excitement + '%';
-  document.getElementById('calmV').textContent = d.calmness + '%';
-  document.getElementById('strV').textContent  = d.stress + '%';
-  document.getElementById('focV').textContent  = d.focus + '%';
-
-  document.getElementById('happF').style.width = d.happiness + '%';
-  document.getElementById('excF').style.width  = d.excitement + '%';
-  document.getElementById('calmF').style.width = d.calmness + '%';
-  document.getElementById('strF').style.width  = d.stress + '%';
-  document.getElementById('focF').style.width  = d.focus + '%';
-
-  document.getElementById('lastUp').textContent = new Date().toLocaleTimeString();
-}
-
-function runSimulation() {
-  const badge = document.getElementById('sourceBadge');
-  badge.textContent = 'Simulation Mode';
-  badge.style.color = 'var(--accent)';
-  badge.style.borderColor = 'var(--accent)';
-  badge.style.background = 'rgba(74,144,226,.18)';
-
-  simAtt = Math.max(20, Math.min(95, simAtt + Math.floor((Math.random() - 0.48) * 8)));
-  simMed = Math.max(15, Math.min(90, simMed + Math.floor((Math.random() - 0.5) * 6)));
-
-  updateUI({
-    attention: simAtt,
-    meditation: simMed,
-    connectionStatus: "Demo Live Signal Quality",
-    delta: 10 + Math.random()*5,
-    theta: 15 + Math.random()*4,
-    alpha: 35 + (simMed*0.1),
-    beta: 20 + (simAtt*0.1),
-    gammaWave: 8 + Math.random()*3,
-    happiness: Math.round(55 + Math.random()*15),
-    excitement: Math.round(40 + Math.random()*12),
-    calmness: simMed,
-    stress: Math.max(5, 100 - simMed),
-    focus: simAtt
-  });
-}
-
-function fetchData() {
-  if (!baseUrl) {
-    runSimulation();
-    return;
+    updateUI({
+      attention: simAtt,
+      meditation: simMed,
+      poorSignal: 0,
+      connectionStatus: "Demo Live Signal Quality",
+      delta: 10 + Math.random()*5,
+      theta: 15 + Math.random()*4,
+      alpha: 35 + (simMed*0.1),
+      beta: 20 + (simAtt*0.1),
+      gammaWave: 8 + Math.random()*3,
+      happiness: Math.round(55 + Math.random()*15),
+      excitement: Math.round(40 + Math.random()*12),
+      calmness: simMed,
+      stress: Math.max(5, 100 - simMed),
+      focus: simAtt
+    });
   }
 
-  fetch(baseUrl + '/data')
-    .then(res => {
-      if (!res.ok) throw new Error();
-      return res.json();
-    })
-    .then(data => {
-      const badge = document.getElementById('sourceBadge');
-      badge.textContent = 'Live Headband';
-      badge.style.color = 'var(--ok)';
-      badge.style.borderColor = 'var(--ok)';
-      badge.style.background = 'rgba(72,187,120,.18)';
-      updateUI(data);
-    })
-    .catch(() => {
+  // ─── DATA FETCHING ───
+  function fetchData() {
+    if (!baseUrl) {
       runSimulation();
-    });
-}
+      return;
+    }
 
-function applyLocalProfile() {
-  const name = document.getElementById('nameIn').value;
-  const age = document.getElementById('ageIn').value;
-  document.getElementById('pBadge').textContent = name + ', Age ' + age;
-}
-function downloadCsvFile() {
-  if (!baseUrl) {
-    alert("Please connect the Cloudflare tunnel or local server URL first!");
-    return;
+    fetch(baseUrl + '/data')
+      .then(res => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then(data => {
+        const badge = document.getElementById('sourceBadge');
+        badge.textContent = 'Live Headband';
+        badge.style.color = 'var(--ok)';
+        badge.style.borderColor = 'var(--ok)';
+        badge.style.background = 'rgba(72,187,120,.18)';
+        updateUI(data);
+      })
+      .catch(() => {
+        runSimulation();
+      });
   }
 
-  const csvUrl = baseUrl + '/training.csv';
+  function applyLocalProfile() {
+    const name = document.getElementById('nameIn').value;
+    const age = document.getElementById('ageIn').value;
+    document.getElementById('pBadge').textContent = name + ', Age ' + age;
+  }
 
-  fetch(csvUrl)
-    .then(res => {
-      if (!res.ok) throw new Error("CSV file not found or internal storage is empty.");
-      return res.blob();
-    })
-    .then(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = 'monojog_eeg_training_' + Date.now() + '.csv';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-    })
-    .catch(err => {
-      alert("Download Error: " + err.message);
-    });
-}
-  
-setInterval(() => { drawRawEeg(); drawFreq(); }, 50);
-setInterval(fetchData, 500);
-fetchData();
+  // ─── CSV DOWNLOAD ───
+  function downloadCsvFile() {
+    if (!baseUrl) {
+      alert("Please connect the Cloudflare tunnel or local server URL first!");
+      return;
+    }
+
+    const csvUrl = baseUrl + '/training.csv';
+
+    fetch(csvUrl)
+      .then(res => {
+        if (!res.ok) throw new Error("CSV file not found or internal storage is empty.");
+        return res.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'monojog_eeg_training_' + Date.now() + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(err => {
+        alert("Download Error: " + err.message);
+      });
+  }
+
+  setInterval(() => { drawRawEeg(); drawFreq(); }, 50);
+  setInterval(fetchData, 500);
+  fetchData();
 </script>
-</body>
-</html>
