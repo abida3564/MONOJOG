@@ -384,13 +384,37 @@ function drawFreq() {
   });
 }
 
-function updateUI(d) {
+  function updateUI(d) {
   document.getElementById('attVal').textContent = d.attention;
   document.getElementById('medVal').textContent = d.meditation;
   document.getElementById('attBar').style.width = d.attention + '%';
   document.getElementById('medBar').style.width = d.meditation + '%';
   document.getElementById('connSt').textContent = d.connectionStatus;
 
+  // ─── SIGNAL QUALITY & ELECTRODE CONTACT FIX ───
+  // ThinkGear: 0 means 100% Quality, 200 means 0% Quality
+  let rawSig = (typeof d.poorSignal !== 'undefined') ? d.poorSignal : 200;
+  let sigPercent = Math.max(0, Math.min(100, Math.round(((200 - rawSig) / 200) * 100)));
+  
+  document.getElementById('sigPct').textContent = sigPercent + '%';
+  document.getElementById('sigBar').style.width = sigPercent + '%';
+  document.getElementById('elPct').textContent = sigPercent + '%';
+  document.getElementById('elBar').style.width = sigPercent + '%';
+
+  // Status message dynamic 
+  let dqDiv = document.getElementById('dqDiv');
+  if (sigPercent >= 80) {
+    dqDiv.className = 'dq dq-ok';
+    dqDiv.textContent = 'High fidelity EEG stream active';
+  } else if (sigPercent >= 40) {
+    dqDiv.className = 'dq dq-warn';
+    dqDiv.textContent = 'Fair Signal - Micro-noise detected';
+  } else {
+    dqDiv.className = 'dq dq-bad';
+    dqDiv.textContent = 'Poor Contact - Adjust Headband';
+  }
+
+  // ─── FREQUENCY BANDS ───
   freqData = { delta:d.delta, theta:d.theta, alpha:d.alpha, beta:d.beta, gammaWave:d.gammaWave };
   document.getElementById('deltaV').textContent = d.delta.toFixed(1) + '%';
   document.getElementById('thetaV').textContent = d.theta.toFixed(1) + '%';
@@ -404,6 +428,7 @@ function updateUI(d) {
   document.getElementById('betaB').style.width  = d.beta + '%';
   document.getElementById('gammaB').style.width = d.gammaWave + '%';
 
+  // ─── EMOTIONS ───
   document.getElementById('happV').textContent = d.happiness + '%';
   document.getElementById('excV').textContent  = d.excitement + '%';
   document.getElementById('calmV').textContent = d.calmness + '%';
@@ -477,7 +502,7 @@ function applyLocalProfile() {
 }
 
 setInterval(() => { drawRawEeg(); drawFreq(); }, 50);
-setInterval(fetchData, 2000);
+setInterval(fetchData, 500);
 fetchData();
 </script>
 </body>
