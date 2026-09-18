@@ -288,11 +288,12 @@ canvas{display:block;width:100%!important;height:100%!important}
 <div class="last-up">Last update: <span id="lastUp">Live</span></div>
 <div class="footer">Monojog &copy; 2026 &nbsp;&middot;&nbsp; Advanced Neuro Analytics Platform</div>
 </div>
-
 <script>
   // ─── GOOGLE SHEETS CLOUD DATABASE CONFIG ───
   const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyr0-aKq1dun8u0LQDS_mfRgHkq9llnzAkRJkFNh9inawV7MvCY22KmHz0aSvvIjpmvAQ/exec";
+  const GOOGLE_SHEET_ID = "1MppLMHULfzwTHxh06T-6tSpe548y-v1W4kERLTcOb40";
   
+  let isLive = false;
   let lastCloudSync = 0;
   let baseUrl = localStorage.getItem('monojog_url') || '';
   let globalTime = 0;
@@ -442,8 +443,8 @@ canvas{display:block;width:100%!important;height:100%!important}
 
     document.getElementById('lastUp').textContent = new Date().toLocaleTimeString();
 
-    // ─── GOOGLE SHEETS REAL-TIME SYNC (EVERY 5 SECONDS) ───
-    if (Date.now() - lastCloudSync > 5000 && d.poorSignal < 150) {
+    // ─── GOOGLE SHEETS REAL-TIME SYNC (ONLY LIVE DATA, EVERY 5 SECONDS) ───
+    if (isLive && (Date.now() - lastCloudSync > 5000) && d.poorSignal < 150) {
       lastCloudSync = Date.now();
       fetch(GOOGLE_SHEET_URL, {
         method: 'POST',
@@ -499,6 +500,7 @@ canvas{display:block;width:100%!important;height:100%!important}
   // ─── DATA FETCHING ───
   function fetchData() {
     if (!baseUrl) {
+      isLive = false;
       runSimulation();
       return;
     }
@@ -509,6 +511,7 @@ canvas{display:block;width:100%!important;height:100%!important}
         return res.json();
       })
       .then(data => {
+        isLive = true;
         const badge = document.getElementById('sourceBadge');
         badge.textContent = 'Live Headband';
         badge.style.color = 'var(--ok)';
@@ -517,6 +520,7 @@ canvas{display:block;width:100%!important;height:100%!important}
         updateUI(data);
       })
       .catch(() => {
+        isLive = false;
         runSimulation();
       });
   }
@@ -527,33 +531,10 @@ canvas{display:block;width:100%!important;height:100%!important}
     document.getElementById('pBadge').textContent = name + ', Age ' + age;
   }
 
-  // ─── CSV DOWNLOAD ───
+  // ─── GOOGLE SHEETS CSV DOWNLOAD ───
   function downloadCsvFile() {
-    if (!baseUrl) {
-      alert("Please connect the Cloudflare tunnel or local server URL first!");
-      return;
-    }
-
-    const csvUrl = baseUrl + '/training.csv';
-
-    fetch(csvUrl)
-      .then(res => {
-        if (!res.ok) throw new Error("CSV file not found or internal storage is empty.");
-        return res.blob();
-      })
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = 'monojog_eeg_training_' + Date.now() + '.csv';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-      })
-      .catch(err => {
-        alert("Download Error: " + err.message);
-      });
+    const exportUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv`;
+    window.open(exportUrl, '_blank');
   }
 
   setInterval(() => { drawRawEeg(); drawFreq(); }, 50);
