@@ -563,33 +563,39 @@ function saveTargetUrl() {
     });
   }
 
-  // ─── DATA INGESTION CYCLE ───
-function fetchData() {
-  if (!baseUrl) {
-    isLive = false;
-    runSimulation();
-    return;
+// ─── DATA INGESTION CYCLE ───
+  function fetchData() {
+    if (!baseUrl) {
+      isLive = false;
+      runSimulation();
+      return;
+    }
+
+    // Pass the bypass header required by loca.lt tunnels
+    fetch(baseUrl + '/data', {
+      method: 'GET',
+      headers: {
+        'Bypass-Tunnel-Reminder': 'true'
+      }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(data => {
+        isLive = true;
+        const badge = document.getElementById('sourceBadge');
+        badge.textContent = 'Live Headband';
+        badge.style.color = 'var(--ok)';
+        badge.style.borderColor = 'var(--ok)';
+        badge.style.background = 'rgba(72,187,120,.18)';
+        updateUI(data);
+      })
+      .catch(err => {
+        console.warn("Fetch waiting or failed:", err);
+      });
   }
 
-  fetch(baseUrl + '/data')
-    .then(res => {
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.json();
-    })
-    .then(data => {
-      isLive = true;
-      const badge = document.getElementById('sourceBadge');
-      badge.textContent = 'Live Headband';
-      badge.style.color = 'var(--ok)';
-      badge.style.borderColor = 'var(--ok)';
-      badge.style.background = 'rgba(72,187,120,.18)';
-      updateUI(data);
-    })
-    .catch(err => {
-      console.warn("Fetch waiting...", err);
-      // এখানে সাথে সাথে runSimulation কল করবেন না, যাতে লাইভ ডেটা ড্রপ না হয়
-    });
-}
   
   function applyLocalProfile() {
     const name = document.getElementById('nameIn').value;
