@@ -191,6 +191,11 @@ canvas{display:block;width:100%!important;height:100%!important}
     <div class="pf"><div class="pl">Age</div><input type="number" id="ageIn" min="5" max="100" value="25"></div>
     <div class="pf"><div class="pl">Age Group</div><div id="ageGrp" class="age-badge">Adult (18-59)</div></div>
     <div class="pf"><button class="apply-btn" onclick="applyLocalProfile()">Apply Profile</button></div>
+<div class="pf">
+  <button class="apply-btn" onclick="downloadCsvFile()" style="background:linear-gradient(90deg,#38b2ac,#319795);">
+    &#128190; Download CSV
+  </button>
+</div>
   </div>
 </div>
 
@@ -500,7 +505,34 @@ function applyLocalProfile() {
   const age = document.getElementById('ageIn').value;
   document.getElementById('pBadge').textContent = name + ', Age ' + age;
 }
+function downloadCsvFile() {
+  if (!baseUrl) {
+    alert("Please connect the Cloudflare tunnel or local server URL first!");
+    return;
+  }
 
+  const csvUrl = baseUrl + '/training.csv';
+
+  fetch(csvUrl)
+    .then(res => {
+      if (!res.ok) throw new Error("CSV file not found or internal storage is empty.");
+      return res.blob();
+    })
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'monojog_eeg_training_' + Date.now() + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    })
+    .catch(err => {
+      alert("Download Error: " + err.message);
+    });
+}
+  
 setInterval(() => { drawRawEeg(); drawFreq(); }, 50);
 setInterval(fetchData, 500);
 fetchData();
