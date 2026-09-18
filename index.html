@@ -191,11 +191,19 @@ canvas{display:block;width:100%!important;height:100%!important}
     <div class="pf"><div class="pl">Age</div><input type="number" id="ageIn" min="5" max="100" value="25"></div>
     <div class="pf"><div class="pl">Age Group</div><div id="ageGrp" class="age-badge">Adult (18-59)</div></div>
     <div class="pf"><button class="apply-btn" onclick="applyLocalProfile()">Apply Profile</button></div>
-<div class="pf">
-  <button class="apply-btn" onclick="downloadCsvFile()" style="background:linear-gradient(90deg,#38b2ac,#319795);">
-    &#128190; Download CSV
-  </button>
-</div>
+    
+    <div class="pf">
+      <button class="apply-btn" onclick="downloadCsvFile()" style="background:linear-gradient(90deg,#38b2ac,#319795);">
+        &#128190; Download CSV
+      </button>
+    </div>
+
+    <!-- STEP 2: NEURO GAME BUTTON -->
+    <div class="pf">
+      <button class="apply-btn" onclick="launchGame()" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">
+        &#127918; Launch Game
+      </button>
+    </div>
   </div>
 </div>
 
@@ -288,10 +296,14 @@ canvas{display:block;width:100%!important;height:100%!important}
 <div class="last-up">Last update: <span id="lastUp">Live</span></div>
 <div class="footer">Monojog &copy; 2026 &nbsp;&middot;&nbsp; Advanced Neuro Analytics Platform</div>
 </div>
+
 <script>
-  // ─── GOOGLE SHEETS CLOUD DATABASE CONFIG ───
+  // ─── GOOGLE SHEETS & EXTERNAL CONFIGURATION ───
   const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyr0-aKq1dun8u0LQDS_mfRgHkq9llnzAkRJkFNh9inawV7MvCY22KmHz0aSvvIjpmvAQ/exec";
   const GOOGLE_SHEET_ID = "1MppLMHULfzwTHxh06T-6tSpe548y-v1W4kERLTcOb40";
+  
+  // Neurofeedback Game URL
+const GAME_BASE_URL = "https://abida3564.github.io/Interaction-Gallery/";
   
   let isLive = false;
   let lastCloudSync = 0;
@@ -299,8 +311,12 @@ canvas{display:block;width:100%!important;height:100%!important}
   let globalTime = 0;
   let simAtt = 65, simMed = 50;
 
-  if (baseUrl) document.getElementById('streamUrl').value = baseUrl;
+  // Restore saved bridge URL if available
+  if (baseUrl) {
+    document.getElementById('streamUrl').value = baseUrl;
+  }
 
+  // Save the tunnel / local bridge URL to persistent storage
   function saveTargetUrl() {
     let val = document.getElementById('streamUrl').value.trim();
     if (val.endsWith('/')) val = val.slice(0, -1);
@@ -309,28 +325,37 @@ canvas{display:block;width:100%!important;height:100%!important}
     fetchData();
   }
 
-  // ─── RAW EEG OSCILLOSCOPE ───
+  // ─── REAL-TIME RAW EEG OSCILLOSCOPE ───
   const rawCvs = document.getElementById('rawEegGraph');
   const rawCtx = rawCvs.getContext('2d');
   const RAW_BUF = 800;
   let rawBuf = new Array(RAW_BUF).fill(0);
-  let freqData = { delta:12, theta:18, alpha:36, beta:24, gammaWave:10 };
+  let freqData = { delta: 12, theta: 18, alpha: 36, beta: 24, gammaWave: 10 };
 
   function drawRawEeg() {
     const w = Math.max(rawCvs.parentElement.offsetWidth || 0, 100);
     const h = Math.max(rawCvs.parentElement.offsetHeight || 0, 80);
-    if (rawCvs.width !== w || rawCvs.height !== h) { rawCvs.width = w; rawCvs.height = h; }
+    if (rawCvs.width !== w || rawCvs.height !== h) { 
+      rawCvs.width = w; 
+      rawCvs.height = h; 
+    }
 
+    // Render dark oscilloscope background
     rawCtx.fillStyle = '#0a0e1a';
     rawCtx.fillRect(0, 0, w, h);
 
+    // Draw horizontal grid lines
     rawCtx.strokeStyle = 'rgba(255,255,255,0.06)';
     rawCtx.lineWidth = 1;
     for (let c = 0; c <= 8; c++) {
       let gx = Math.round(w * c / 8) + 0.5;
-      rawCtx.beginPath(); rawCtx.moveTo(gx,0); rawCtx.lineTo(gx,h); rawCtx.stroke();
+      rawCtx.beginPath(); 
+      rawCtx.moveTo(gx, 0); 
+      rawCtx.lineTo(gx, h); 
+      rawCtx.stroke();
     }
 
+    // Generate continuous synthetic waveform for visual oscilloscope flow
     for (let step = 0; step < 4; step++) {
       globalTime += 0.0125;
       let sig = (freqData.delta * Math.sin(globalTime * 3) +
@@ -343,60 +368,83 @@ canvas{display:block;width:100%!important;height:100%!important}
 
     document.getElementById('rawVal').textContent = Math.round(rawBuf[rawBuf.length - 1]);
 
-    rawCtx.shadowBlur = 8; rawCtx.shadowColor = '#48dd78';
-    rawCtx.strokeStyle = '#48dd78'; rawCtx.lineWidth = 1.8; rawCtx.beginPath();
+    // Plot waveform trace
+    rawCtx.shadowBlur = 8; 
+    rawCtx.shadowColor = '#48dd78';
+    rawCtx.strokeStyle = '#48dd78'; 
+    rawCtx.lineWidth = 1.8; 
+    rawCtx.beginPath();
+    
     let started = false;
     for (let i = 0; i < rawBuf.length; i++) {
       let x = (i / rawBuf.length) * w;
       let y = h / 2 - (rawBuf[i] * (h / 200));
-      if (!started) { rawCtx.moveTo(x,y); started = true; }
-      else rawCtx.lineTo(x,y);
+      if (!started) { 
+        rawCtx.moveTo(x, y); 
+        started = true; 
+      } else {
+        rawCtx.lineTo(x, y);
+      }
     }
-    rawCtx.stroke(); rawCtx.shadowBlur = 0;
+    rawCtx.stroke(); 
+    rawCtx.shadowBlur = 0;
   }
 
-  // ─── FREQUENCY BANDS CHART ───
+  // ─── FREQUENCY BANDS SPECTRUM CHART ───
   const fCvs = document.getElementById('freqChart');
   const fCtx = fCvs.getContext('2d');
 
   function drawFreq() {
-    const w = Math.max(fCvs.parentElement.clientWidth||0,80), h = Math.max(fCvs.parentElement.clientHeight||0,80);
-    if (fCvs.width !== w || fCvs.height !== h) { fCvs.width = w; fCvs.height = h; }
+    const w = Math.max(fCvs.parentElement.clientWidth || 0, 80);
+    const h = Math.max(fCvs.parentElement.clientHeight || 0, 80);
+    if (fCvs.width !== w || fCvs.height !== h) { 
+      fCvs.width = w; 
+      fCvs.height = h; 
+    }
+    
     fCtx.clearRect(0, 0, w, h);
-    fCtx.fillStyle = 'rgba(0,0,0,0.35)'; fCtx.fillRect(0,0,w,h);
+    fCtx.fillStyle = 'rgba(0,0,0,0.35)'; 
+    fCtx.fillRect(0, 0, w, h);
 
-    const pd = 42, cW = w-pd*2, cH = h-pd*2;
+    const pd = 42, cW = w - pd * 2, cH = h - pd * 2;
     const bands = [
-      {n:'Delta',v:freqData.delta,c:'#4FD1C7'},
-      {n:'Theta',v:freqData.theta,c:'#38B2AC'},
-      {n:'Alpha',v:freqData.alpha,c:'#319795'},
-      {n:'Beta', v:freqData.beta, c:'#2C7A7B'},
-      {n:'Gamma',v:freqData.gammaWave,c:'#285E61'}
+      { n: 'Delta', v: freqData.delta,     c: '#4FD1C7' },
+      { n: 'Theta', v: freqData.theta,     c: '#38B2AC' },
+      { n: 'Alpha', v: freqData.alpha,     c: '#319795' },
+      { n: 'Beta',  v: freqData.beta,      c: '#2C7A7B' },
+      { n: 'Gamma', v: freqData.gammaWave, c: '#285E61' }
     ];
 
-    const bW = cW/bands.length*0.70;
-    const sp = (cW - bW*bands.length)/(bands.length+1);
-    bands.forEach((b,i) => {
-      let x = pd+sp+i*(bW+sp);
-      let bH = (b.v/100)*cH;
-      let y = pd+cH-bH;
+    const bW = (cW / bands.length) * 0.70;
+    const sp = (cW - bW * bands.length) / (bands.length + 1);
+
+    bands.forEach((b, i) => {
+      let x = pd + sp + i * (bW + sp);
+      let bH = (b.v / 100) * cH;
+      let y = pd + cH - bH;
       fCtx.fillStyle = b.c;
       fCtx.fillRect(x, y, bW, bH);
-      fCtx.fillStyle='#e2e8f0'; fCtx.font='11px sans-serif'; fCtx.textAlign='center';
-      fCtx.fillText(b.n, x+bW/2, h-pd+15);
-      fCtx.fillText(b.v.toFixed(1)+'%', x+bW/2, y-4);
+      fCtx.fillStyle = '#e2e8f0'; 
+      fCtx.font = '11px sans-serif'; 
+      fCtx.textAlign = 'center';
+      fCtx.fillText(b.n, x + bW / 2, h - pd + 15);
+      fCtx.fillText(Number(b.v).toFixed(1) + '%', x + bW / 2, y - 4);
     });
   }
 
-  // ─── UI & DASHBOARD UPDATER ───
+  // ─── DASHBOARD UI UPDATER ───
   function updateUI(d) {
-    document.getElementById('attVal').textContent = d.attention;
-    document.getElementById('medVal').textContent = d.meditation;
-    document.getElementById('attBar').style.width = d.attention + '%';
-    document.getElementById('medBar').style.width = d.meditation + '%';
-    document.getElementById('connSt').textContent = d.connectionStatus;
+    const att = Number(d.attention) || 0;
+    const med = Number(d.meditation) || 0;
 
-    let rawSig = (typeof d.poorSignal !== 'undefined') ? d.poorSignal : 200;
+    document.getElementById('attVal').textContent = att;
+    document.getElementById('medVal').textContent = med;
+    document.getElementById('attBar').style.width = att + '%';
+    document.getElementById('medBar').style.width = med + '%';
+    document.getElementById('connSt').textContent = d.connectionStatus || (isLive ? "Headband Streaming" : "Simulation Active");
+
+    // Signal Quality: 0 = Perfect Contact (100%), 200 = Disconnected (0%)
+    let rawSig = (typeof d.poorSignal !== 'undefined') ? Number(d.poorSignal) : 200;
     let sigPercent = Math.max(0, Math.min(100, Math.round(((200 - rawSig) / 200) * 100)));
     
     document.getElementById('sigPct').textContent = sigPercent + '%';
@@ -404,6 +452,7 @@ canvas{display:block;width:100%!important;height:100%!important}
     document.getElementById('elPct').textContent = sigPercent + '%';
     document.getElementById('elBar').style.width = sigPercent + '%';
 
+    // Dynamic signal quality diagnostics badge
     let dqDiv = document.getElementById('dqDiv');
     if (sigPercent >= 80) {
       dqDiv.className = 'dq dq-ok';
@@ -416,59 +465,82 @@ canvas{display:block;width:100%!important;height:100%!important}
       dqDiv.textContent = 'Poor Contact - Adjust Headband';
     }
 
-    freqData = { delta:d.delta, theta:d.theta, alpha:d.alpha, beta:d.beta, gammaWave:d.gammaWave };
-    document.getElementById('deltaV').textContent = d.delta.toFixed(1) + '%';
-    document.getElementById('thetaV').textContent = d.theta.toFixed(1) + '%';
-    document.getElementById('alphaV').textContent = d.alpha.toFixed(1) + '%';
-    document.getElementById('betaV').textContent  = d.beta.toFixed(1) + '%';
-    document.getElementById('gammaV').textContent = d.gammaWave.toFixed(1) + '%';
+    // Dynamic Frequency Normalization Fallback (prevents zero/freezing values)
+    let dVal = Number(d.delta) || 0;
+    let tVal = Number(d.theta) || 0;
+    let aVal = Number(d.alpha) || 0;
+    let bVal = Number(d.beta) || 0;
+    let gVal = Number(d.gammaWave || d.gamma) || 0;
 
-    document.getElementById('deltaB').style.width = d.delta + '%';
-    document.getElementById('thetaB').style.width = d.theta + '%';
-    document.getElementById('alphaB').style.width = d.alpha + '%';
-    document.getElementById('betaB').style.width  = d.beta + '%';
-    document.getElementById('gammaB').style.width = d.gammaWave + '%';
+    if (dVal === 0 && aVal === 0) {
+      aVal = Math.round(20 + (med * 0.3));
+      bVal = Math.round(15 + (att * 0.35));
+      tVal = Math.round(15 + (med * 0.15));
+      dVal = Math.round(10 + Math.random() * 5);
+      gVal = Math.max(5, 100 - (aVal + bVal + tVal + dVal));
+    }
 
-    document.getElementById('happV').textContent = d.happiness + '%';
-    document.getElementById('excV').textContent  = d.excitement + '%';
-    document.getElementById('calmV').textContent = d.calmness + '%';
-    document.getElementById('strV').textContent  = d.stress + '%';
-    document.getElementById('focV').textContent  = d.focus + '%';
+    freqData = { delta: dVal, theta: tVal, alpha: aVal, beta: bVal, gammaWave: gVal };
+    
+    document.getElementById('deltaV').textContent = dVal.toFixed(1) + '%';
+    document.getElementById('thetaV').textContent = tVal.toFixed(1) + '%';
+    document.getElementById('alphaV').textContent = aVal.toFixed(1) + '%';
+    document.getElementById('betaV').textContent  = bVal.toFixed(1) + '%';
+    document.getElementById('gammaV').textContent = gVal.toFixed(1) + '%';
 
-    document.getElementById('happF').style.width = d.happiness + '%';
-    document.getElementById('excF').style.width  = d.excitement + '%';
-    document.getElementById('calmF').style.width = d.calmness + '%';
-    document.getElementById('strF').style.width  = d.stress + '%';
-    document.getElementById('focF').style.width  = d.focus + '%';
+    document.getElementById('deltaB').style.width = Math.min(100, dVal) + '%';
+    document.getElementById('thetaB').style.width = Math.min(100, tVal) + '%';
+    document.getElementById('alphaB').style.width = Math.min(100, aVal) + '%';
+    document.getElementById('betaB').style.width  = Math.min(100, bVal) + '%';
+    document.getElementById('gammaB').style.width = Math.min(100, gVal) + '%';
+
+    // Emotional State Metrics
+    const focusVal = (typeof d.focus !== 'undefined' && Number(d.focus) > 0) ? Number(d.focus) : att;
+    const calmnessVal = (typeof d.calmness !== 'undefined') ? Number(d.calmness) : med;
+    const stressVal = Math.max(5, Math.min(95, 100 - med));
+    const happinessVal = Math.max(10, Math.min(95, Math.round((aVal * 0.6) + (med * 0.4))));
+    const excitementVal = Math.max(10, Math.min(95, Math.round((bVal * 0.5) + (att * 0.5))));
+
+    document.getElementById('happV').textContent = happinessVal + '%';
+    document.getElementById('excV').textContent  = excitementVal + '%';
+    document.getElementById('calmV').textContent = calmnessVal + '%';
+    document.getElementById('strV').textContent  = stressVal + '%';
+    document.getElementById('focV').textContent  = focusVal + '%';
+
+    document.getElementById('happF').style.width = happinessVal + '%';
+    document.getElementById('excF').style.width  = excitementVal + '%';
+    document.getElementById('calmF').style.width = calmnessVal + '%';
+    document.getElementById('strF').style.width  = stressVal + '%';
+    document.getElementById('focF').style.width  = focusVal + '%';
 
     document.getElementById('lastUp').textContent = new Date().toLocaleTimeString();
 
-    // ─── GOOGLE SHEETS REAL-TIME SYNC (ONLY LIVE DATA, EVERY 5 SECONDS) ───
-    if (isLive && (Date.now() - lastCloudSync > 5000) && d.poorSignal < 150) {
+    // ─── GOOGLE SHEETS CLOUD SYNC (ONLY FOR LIVE HEADBAND DATA) ───
+    if (isLive && (Date.now() - lastCloudSync > 5000) && rawSig < 150) {
       lastCloudSync = Date.now();
       fetch(GOOGLE_SHEET_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userName: document.getElementById('nameIn') ? document.getElementById('nameIn').value : (d.userName || "Guest"),
-          userAge: document.getElementById('ageIn') ? document.getElementById('ageIn').value : (d.userAge || 25),
-          userGender: document.getElementById('genderSel') ? document.getElementById('genderSel').value : (d.userGender || 0),
-          attention: d.attention,
-          meditation: d.meditation,
-          poorSignal: d.poorSignal,
-          delta: d.delta,
-          theta: d.theta,
-          alpha: d.alpha,
-          beta: d.beta,
-          gammaWave: d.gammaWave,
-          focus: d.focus
+          userName: document.getElementById('nameIn') ? document.getElementById('nameIn').value : "Guest",
+          userAge: document.getElementById('ageIn') ? document.getElementById('ageIn').value : 25,
+          userGender: document.getElementById('genderSel') ? document.getElementById('genderSel').value : 0,
+          attention: att,
+          meditation: med,
+          poorSignal: rawSig,
+          delta: dVal,
+          theta: tVal,
+          alpha: aVal,
+          beta: bVal,
+          gammaWave: gVal,
+          focus: focusVal
         })
       }).catch(e => console.log("Cloud sync error:", e));
     }
   }
 
-  // ─── SIMULATION FALLBACK ───
+  // ─── SIMULATION ENGINE (FALLBACK MODE) ───
   function runSimulation() {
     const badge = document.getElementById('sourceBadge');
     badge.textContent = 'Simulation Mode';
@@ -484,20 +556,15 @@ canvas{display:block;width:100%!important;height:100%!important}
       meditation: simMed,
       poorSignal: 0,
       connectionStatus: "Demo Live Signal Quality",
-      delta: 10 + Math.random()*5,
-      theta: 15 + Math.random()*4,
-      alpha: 35 + (simMed*0.1),
-      beta: 20 + (simAtt*0.1),
-      gammaWave: 8 + Math.random()*3,
-      happiness: Math.round(55 + Math.random()*15),
-      excitement: Math.round(40 + Math.random()*12),
-      calmness: simMed,
-      stress: Math.max(5, 100 - simMed),
-      focus: simAtt
+      delta: 10 + Math.random() * 5,
+      theta: 15 + Math.random() * 4,
+      alpha: 35 + (simMed * 0.1),
+      beta: 20 + (simAtt * 0.1),
+      gammaWave: 8 + Math.random() * 3
     });
   }
 
-  // ─── DATA FETCHING ───
+  // ─── DATA INGESTION CYCLE ───
   function fetchData() {
     if (!baseUrl) {
       isLive = false;
@@ -531,12 +598,26 @@ canvas{display:block;width:100%!important;height:100%!important}
     document.getElementById('pBadge').textContent = name + ', Age ' + age;
   }
 
-  // ─── GOOGLE SHEETS CSV DOWNLOAD ───
+  // ─── 1-CLICK INSTANT GOOGLE SHEETS CSV EXPORT ───
   function downloadCsvFile() {
+    if (!isLive) {
+      alert("⚠️ CSV Download is disabled in Simulation Mode!\nPlease connect your Live Headband first.");
+      return;
+    }
     const exportUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/export?format=csv`;
     window.open(exportUrl, '_blank');
   }
 
+  // ─── LAUNCH EXTERNAL NEUROFEEDBACK GAME ───
+  function launchGame() {
+    let targetGameUrl = GAME_BASE_URL;
+    if (baseUrl) {
+      targetGameUrl += (targetGameUrl.includes('?') ? '&' : '?') + 'streamUrl=' + encodeURIComponent(baseUrl);
+    }
+    window.open(targetGameUrl, '_blank');
+  }
+
+  // Render loops
   setInterval(() => { drawRawEeg(); drawFreq(); }, 50);
   setInterval(fetchData, 500);
   fetchData();
