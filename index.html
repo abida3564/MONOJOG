@@ -578,14 +578,9 @@ function fetchData() {
     return;
   }
 
-  // Abort request after 2 seconds to prevent the dashboard from freezing
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 2000);
-
-  fetch(baseUrl + '/data', { signal: controller.signal })
+  fetch(baseUrl + '/data')
     .then(res => {
-      clearTimeout(timeoutId);
-      if (!res.ok) throw new Error("HTTP error: " + res.status);
+      if (!res.ok) throw new Error("HTTP " + res.status);
       return res.json();
     })
     .then(data => {
@@ -598,10 +593,8 @@ function fetchData() {
       updateUI(data);
     })
     .catch(err => {
-      clearTimeout(timeoutId);
-      console.warn("ESP32 Fetch Failed:", err.message);
-      isLive = false;
-      runSimulation();
+      console.warn("Fetch waiting...", err);
+      // এখানে সাথে সাথে runSimulation কল করবেন না, যাতে লাইভ ডেটা ড্রপ না হয়
     });
 }
   
@@ -632,6 +625,6 @@ function fetchData() {
 
   // Render loops
   setInterval(() => { drawRawEeg(); drawFreq(); }, 50);
-  setInterval(fetchData, 500);
+  setInterval(fetchData, 1500);
   fetchData();
 </script>
