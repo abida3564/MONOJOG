@@ -317,14 +317,20 @@ const GAME_BASE_URL = "https://abida3564.github.io/Interaction-Gallery/";
   }
 
   // Save the tunnel / local bridge URL to persistent storage
-  function saveTargetUrl() {
-    let val = document.getElementById('streamUrl').value.trim();
-    if (val.endsWith('/')) val = val.slice(0, -1);
-    localStorage.setItem('monojog_url', val);
-    baseUrl = val;
-    fetchData();
+function saveTargetUrl() {
+  let val = document.getElementById('streamUrl').value.trim();
+  
+  // Remove trailing slashes and any trailing "/data"
+  val = val.replace(/\/+$/, '');
+  if (val.endsWith('/data')) {
+    val = val.slice(0, -5);
   }
-
+  
+  localStorage.setItem('monojog_url', val);
+  baseUrl = val;
+  fetchData();
+}
+  
   // ─── REAL-TIME RAW EEG OSCILLOSCOPE ───
   const rawCvs = document.getElementById('rawEegGraph');
   const rawCtx = rawCvs.getContext('2d');
@@ -565,33 +571,40 @@ const GAME_BASE_URL = "https://abida3564.github.io/Interaction-Gallery/";
   }
 
   // ─── DATA INGESTION CYCLE ───
-  function fetchData() {
-    if (!baseUrl) {
-      isLive = false;
-      runSimulation();
-      return;
-    }
-
-    fetch(baseUrl + '/data')
-      .then(res => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
-      .then(data => {
-        isLive = true;
-        const badge = document.getElementById('sourceBadge');
-        badge.textContent = 'Live Headband';
-        badge.style.color = 'var(--ok)';
-        badge.style.borderColor = 'var(--ok)';
-        badge.style.background = 'rgba(72,187,120,.18)';
-        updateUI(data);
-      })
-      .catch(() => {
-        isLive = false;
-        runSimulation();
-      });
+function fetchData() {
+  if (!baseUrl) {
+    isLive = false;
+    runSimulation();
+    return;
   }
 
+  // Abort request after 2 seconds to prevent the dashboard from freezing
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+  fetch(baseUrl + '/data', { signal: controller.signal })
+    .then(res => {
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error("HTTP error: " + res.status);
+      return res.json();
+    })
+    .then(data => {
+      isLive = true;
+      const badge = document.getElementById('sourceBadge');
+      badge.textContent = 'Live Headband';
+      badge.style.color = 'var(--ok)';
+      badge.style.borderColor = 'var(--ok)';
+      badge.style.background = 'rgba(72,187,120,.18)';
+      updateUI(data);
+    })
+    .catch(err => {
+      clearTimeout(timeoutId);
+      console.warn("ESP32 Fetch Failed:", err.message);
+      isLive = false;
+      runSimulation();
+    });
+}
+  
   function applyLocalProfile() {
     const name = document.getElementById('nameIn').value;
     const age = document.getElementById('ageIn').value;
