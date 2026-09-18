@@ -478,13 +478,6 @@ function saveTargetUrl() {
     let bVal = Number(d.beta) || 0;
     let gVal = Number(d.gammaWave || d.gamma) || 0;
 
-    if (dVal === 0 && aVal === 0) {
-      aVal = Math.round(20 + (med * 0.3));
-      bVal = Math.round(15 + (att * 0.35));
-      tVal = Math.round(15 + (med * 0.15));
-      dVal = Math.round(10 + Math.random() * 5);
-      gVal = Math.max(5, 100 - (aVal + bVal + tVal + dVal));
-    }
 
     freqData = { delta: dVal, theta: tVal, alpha: aVal, beta: bVal, gammaWave: gVal };
     
